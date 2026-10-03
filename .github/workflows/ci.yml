@@ -9,6 +9,14 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
+  # cancel spersede runs on the same branch to recude ci durations
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -23,6 +31,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
 
       - name: Install dependencies
         run: |
@@ -36,9 +46,68 @@ jobs:
           ruff check .
           mypy src chacc_api chacc_cli --ignore-missing-imports || true
 
-      - name: Run tests
+      - name: Run tests (with coverage)
         run: |
-          PYTHONPATH=src:. pytest tests/ -v --tb=short
+          PYTHONPATH=src:. pytest tests/ -v --tb=short \
+            --cov=src --cov=chacc_cli --cov=chacc_api \
+            --cov-report=term-missing --cov-report=xml:coverage.xml
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import os, xml.etree.ElementTree as ET
+          if os.path.exists("coverage.xml"):
+              rate = float(ET.parse("coverage.xml").getroot().get("line-rate", 0)) * 100
+              print(f"### Test coverage: {rate:.1f}%")
+          PY
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          if-no-files-found: ignore
+
+  #  Maintain testing across py versions
+  compat:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: |
+          uv pip install --system -e .
+          uv pip install --system -e .[dev]
+      - name: Run tests
+        run: PYTHONPATH=src:. pytest tests/ -q --tb=short
+
+  # report known-vulnerable dependencies. adv only
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+      - name: pip-audit
+        continue-on-error: true
+        run: |
+          uv pip install --system pip-audit
+          pip-audit -r requirements.txt
 
   build-cli:
     runs-on: ubuntu-latest
