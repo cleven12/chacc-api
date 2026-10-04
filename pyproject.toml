@@ -43,8 +43,7 @@ dependencies = [
     "pytest-asyncio",
     "httpx",
     "uuid-utils",
-    "aiosqlite",
-    "
+    "aiosqlite"
 ]
 
 [project.optional-dependencies]
