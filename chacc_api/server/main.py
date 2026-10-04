@@ -25,7 +25,7 @@ from src.constants import (
 from src.core_services import BackboneContext
 from src.database import get_async_db, get_db
 from src.env_validator import ValidationError, validate_environment
-from src.health import health_router
+from src.health import get_version, health_router
 from src.logger import configure_logging, get_default_log_level
 from src.migration.runner import run_migration
 from src.modules import modules_router
@@ -131,7 +131,7 @@ async def onStartupLifespan(app: FastAPI):
 app = FastAPI(
     title="ChaCC API Backbone",
     description="Plug and Play Modular Application for extensible APIs with FastAPI.",
-    version="1.0.0-b5.2",
+    version=get_version(),
     docs_url=None,
     redoc_url=None,
     lifespan=onStartupLifespan,
