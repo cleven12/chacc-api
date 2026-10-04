@@ -23,6 +23,7 @@ from src.constants import (
     PLUGINS_DIR,
 )
 from src.core_services import BackboneContext
+from src.csv_utils import parse_csv
 from src.database import get_async_db, get_db
 from src.env_validator import ValidationError, validate_environment
 from src.health import get_version, health_router
@@ -138,13 +139,12 @@ app = FastAPI(
 )
 patch_binary_file_schema(app)
 
-allowed_origins = [CORS_ALLOWED_ORIGINS] if CORS_ALLOWED_ORIGINS != "*" else ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=parse_csv(CORS_ALLOWED_ORIGINS),
     allow_credentials=CORS_ALLOW_CREDENTIALS,
-    allow_methods=([CORS_ALLOW_METHODS] if CORS_ALLOW_METHODS != "*" else ["*"]),
-    allow_headers=([CORS_ALLOW_HEADERS] if CORS_ALLOW_HEADERS != "*" else ["*"]),
+    allow_methods=parse_csv(CORS_ALLOW_METHODS),
+    allow_headers=parse_csv(CORS_ALLOW_HEADERS),
 )
 
 app.state.limiter = limiter
