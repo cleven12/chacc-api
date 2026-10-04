@@ -9,7 +9,7 @@ on:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
-  # cancel spersede runs on the same branch to recude ci durations
+  # cancel superseded runs on the same branch to reduce ci duration
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -70,7 +70,7 @@ jobs:
           path: coverage.xml
           if-no-files-found: ignore
 
-  #  Maintain testing across py versions
+  # run tests across supported python versions
   compat:
     runs-on: ubuntu-latest
     strategy:
@@ -92,7 +92,7 @@ jobs:
       - name: Run tests
         run: PYTHONPATH=src:. pytest tests/ -q --tb=short
 
-  # report known-vulnerable dependencies. adv only
+  # report known-vulnerable dependencies (advisory only)
   dependency-audit:
     runs-on: ubuntu-latest
     steps:
