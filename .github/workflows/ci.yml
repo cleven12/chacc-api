@@ -18,6 +18,32 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev] ruff mypy
+
+      - name: Ruff format
+        run: ruff format --check .
+
+      - name: Ruff check
+        run: ruff check .
+
+      - name: Mypy
+        run: mypy src chacc_api chacc_cli --ignore-missing-imports || true
+
   test:
     runs-on: ubuntu-latest
 
@@ -28,23 +54,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          enable-cache: true
+          cache: pip
 
       - name: Install dependencies
         run: |
-          uv pip install --system -e .
-          uv pip install --system -e .[dev]
-
-      - name: Run linters
-        run: |
-          uv pip install --system ruff mypy
-          ruff format --check .
-          ruff check .
-          mypy src chacc_api chacc_cli --ignore-missing-imports || true
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
 
       - name: Run tests (with coverage)
         run: |
@@ -82,17 +97,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: astral-sh/setup-uv@v4
-        with:
-          enable-cache: true
+          cache: pip
       - name: Install dependencies
         run: |
-          uv pip install --system -e .
-          uv pip install --system -e .[dev]
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
       - name: Run tests
         run: PYTHONPATH=src:. pytest tests/ -q --tb=short
 
-  # report known-vulnerable dependencies (advisory only)
+  # report known-vulnerable dependencies
   dependency-audit:
     runs-on: ubuntu-latest
     steps:
@@ -100,13 +113,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - uses: astral-sh/setup-uv@v4
-        with:
-          enable-cache: true
+          cache: pip
       - name: pip-audit
-        continue-on-error: true
         run: |
-          uv pip install --system pip-audit
+          python -m pip install --upgrade pip
+          pip install pip-audit
           pip-audit -r requirements.txt
 
   build-cli:
@@ -119,17 +130,15 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
+          cache: pip
 
       - name: Install build
-        run: uv pip install --system build
+        run: pip install build
 
       - name: Build package
         run: python -m build
 
       - name: Check package
         run: |
-          uv pip install --system twine
+          pip install twine
           twine check dist/*
